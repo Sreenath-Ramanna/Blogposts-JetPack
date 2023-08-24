@@ -1,0 +1,79 @@
+name: "default_workflow"
+
+env:
+  A_SECRET: ${{secrets.TEST_SECRET_ACCESS}}
+
+on:
+  workflow_dispatch:
+    inputs:
+      incremental_tag_start:
+        description: "starting SDK revision for incremental pkg"
+        required: true
+      incremental_tag_target:
+        description: "intended end SDK revision for incremental pkg"
+        required: true
+
+jobs:
+  job1:
+    runs-on: self-hosted-pop-sree
+    name: "step1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: "step1.1"
+        run: | 
+          echo "Test user input availability"
+          echo "incremental_tag_start: ${{ github.event.inputs.incremental_tag_start }}" 
+          echo "incremental_tag_target: ${{ github.event.inputs.incremental_tag_target }}" 
+          
+          echo "Test local network access"
+          ip address
+          ping -c 4 10.11.100.77
+          
+          echo "Test local adb device access"
+          adb devices
+          adb shell "ls -l"
+          
+          echo "Rest of the regular job"
+          mkdir -p /${{github.workspace}}/out
+          touch /${{github.workspace}}/out/progress
+          echo "job1:steps:run" | tee -a /${{github.workspace}}/out/progress
+          pwd && ls -l
+          echo "TEST_EXP: $TEST_EXP"
+          chmod +x ./test_script.sh
+          ./test_script.sh
+          source ./values.sh
+          echo "TEST_EXP: $TEST_EXP"
+      - name: "store artifacts"
+        uses: actions/upload-artifact@v3
+        with:
+          name: output-files
+          path: /${{github.workspace}}/out/progress
+      - name: "test secret access"
+        run: |
+          echo "Nothing should be seen below (or one/more *)"
+          echo "$A_SECRET"
+  
+  job2:
+    runs-on: ubuntu-latest
+    name: "step2"
+    needs: job1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: "download artifacts"
+        uses: actions/download-artifact@v3
+        with:
+          name: output-files
+          path: /${{github.workspace}}/out/
+      - name: "second job2/step"
+        run: |
+          pwd && ls -lR
+          echo "job2:steps:run" | tee -a /${{github.workspace}}/out/progress
+          cat  /${{github.workspace}}/out/progress
